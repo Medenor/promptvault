@@ -1,4 +1,4 @@
-![](https://repository-images.githubusercontent.com/1031380370/45369aed-0984-47e7-b9d0-587b5637d93c)
+![](https://repository-images.githubusercontent.com/1031380370/60edfefb-76ea-426b-8f25-b1eedce5702f)
 # PromptVault
 
 PromptVault is a prompt management application designed to help users easily organize, store, and retrieve their prompts for various AI applications, software development, content marketing, and much more. Whether you are a developer, writer, marketer, or simply a user of AI-based tools, PromptVault allows you to centralize your prompts and improve your productivity.
