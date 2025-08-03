@@ -156,5 +156,5 @@ class TagDialog(QDialog):
                  processed_removed.add(old)
 
 
-        print(f"Changes to apply: Renamed={processed_renamed}, Removed={processed_removed}")
-        return processed_renamed, processed_removed
+        print(f"Changes to apply: Renamed={processed_renamed}, Removed={processed_removed}, Added={self.added_tags}")
+        return processed_renamed, processed_removed, self.added_tags

@@ -80,7 +80,7 @@ class PromptDialog(QDialog):
         self.noteEdit = QTextEdit()
         self.noteEdit.setPlaceholderText("Add additional notes or information here...")
         if data:
-            self.noteEdit.setHtml(data.get('note', ''))
+            self.noteEdit.setPlainText(data.get('note', ''))
         layout.addWidget(self.noteEdit)
 
         buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
@@ -100,7 +100,7 @@ class PromptDialog(QDialog):
             self.categoryCombo.setCurrentText(version_data.get('category', 'No category'))
             self.tagsEdit.setText(", ".join(version_data.get('tags', [])))
             self.promptEdit.setPlainText(version_data.get('prompt', ''))
-            self.noteEdit.setHtml(version_data.get('note', ''))
+            self.noteEdit.setPlainText(version_data.get('note', ''))
             print(f"Displaying history version index {original_history_index}")
 
     def purge_history(self):
@@ -153,5 +153,5 @@ class PromptDialog(QDialog):
             'category': self.categoryCombo.currentText(),
             'tags': tags,
             'prompt': self.promptEdit.toPlainText(),
-            'note': self.noteEdit.toHtml()
+            'note': self.noteEdit.toPlainText()
         }

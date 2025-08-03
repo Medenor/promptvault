@@ -1,23 +1,75 @@
-[
-  {
-    "id": "1",
-    "title": "Generate a simple Python code",
-    "content": "Write a Python script that calculates the sum of two numbers.",
-    "category": "Software Development",
-    "tags": ["Python", "Script", "Calculation"]
-  },
-  {
-    "id": "2",
-    "title": "Content ideas for a blog",
-    "content": "Suggest 5 blog article ideas about artificial intelligence.",
-    "category": "Content Marketing",
-    "tags": ["AI", "Blog", "Ideas"]
-  },
-  {
-    "id": "3",
-    "title": "Write a thank-you email",
-    "content": "Draft a professional thank-you email after a job interview.",
-    "category": "Communication",
-    "tags": ["Email", "Professional", "Interview"]
-  }
-]
+{
+    "next_id": 4,
+    "prompts": {
+        "1": {
+            "data": {
+                "title": "Generate a simple Python code",
+                "prompt": "Write a Python script that calculates the sum of two numbers.",
+                "category": "Software Development",
+                "tags": ["Python", "Script", "Calculation"],
+                "favorite": false
+            },
+            "history": [
+                {
+                    "title": "Generate a simple Python code",
+                    "prompt": "Write a Python script that calculates the sum of two numbers.",
+                    "category": "Software Development",
+                    "tags": ["Python", "Script", "Calculation"],
+                    "favorite": false
+                }
+            ]
+        },
+        "2": {
+            "data": {
+                "title": "Content ideas for a blog",
+                "prompt": "Suggest 5 blog article ideas about artificial intelligence.",
+                "category": "Content Marketing",
+                "tags": ["AI", "Blog", "Ideas"],
+                "favorite": false
+            },
+            "history": [
+                {
+                    "title": "Content ideas for a blog",
+                    "prompt": "Suggest 5 blog article ideas about artificial intelligence.",
+                    "category": "Content Marketing",
+                    "tags": ["AI", "Blog", "Ideas"],
+                    "favorite": false
+                }
+            ]
+        },
+        "3": {
+            "data": {
+                "title": "Write a thank-you email",
+                "prompt": "Draft a professional thank-you email after a job interview.",
+                "category": "Communication",
+                "tags": ["Email", "Professional", "Interview"],
+                "favorite": false
+            },
+            "history": [
+                {
+                    "title": "Write a thank-you email",
+                    "prompt": "Draft a professional thank-you email after a job interview.",
+                    "category": "Communication",
+                    "tags": ["Email", "Professional", "Interview"],
+                    "favorite": false
+                }
+            ]
+        }
+    },
+    "categories": [
+        "Communication",
+        "Content Marketing",
+        "Software Development"
+    ],
+    "global_tags": [
+        "AI",
+        "Blog",
+        "Calculation",
+        "Email",
+        "Ideas",
+        "Interview",
+        "Professional",
+        "Python",
+        "Script"
+    ]
+}

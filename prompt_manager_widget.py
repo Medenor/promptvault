@@ -23,6 +23,7 @@ class PromptManager(QWidget):
         self.prompts = {}
         self.next_id = 0
         self.categories = []
+        self.global_tags = set() # New attribute for globally managed tags
         self.load_prompts()
         self.initUI()
         self.update_category_list()
@@ -135,10 +136,14 @@ class PromptManager(QWidget):
 
     def update_tag_list(self):
         self.tagList.clear()
-        all_tags = set()
+        all_tags_from_prompts = set()
         for prompt_info in self.prompts.values():
-            all_tags.update(prompt_info['data'].get('tags', []))
-        for tag in sorted(list(all_tags)):
+            all_tags_from_prompts.update(prompt_info['data'].get('tags', []))
+        
+        # Combine tags from prompts and globally managed tags
+        all_display_tags = all_tags_from_prompts.union(self.global_tags)
+
+        for tag in sorted(list(all_display_tags)):
             self.tagList.addItem(tag)
 
     def update_prompt_list(self, filter_category=None, filter_tag=None, search_term="", filter_favorites=False):
@@ -451,7 +456,13 @@ class PromptManager(QWidget):
             self.categories.sort()
             with open(self.data_file, 'w', encoding='utf-8') as f:
                 prompts_to_save = {str(k): v for k, v in self.prompts.items()}
-                save_data = {'next_id': self.next_id, 'prompts': prompts_to_save, 'categories': self.categories}
+                # Save global_tags along with other data
+                save_data = {
+                    'next_id': self.next_id,
+                    'prompts': prompts_to_save,
+                    'categories': self.categories,
+                    'global_tags': sorted(list(self.global_tags)) # Save as sorted list
+                }
                 json.dump(save_data, f, ensure_ascii=False, indent=4)
         except IOError as e:
             QMessageBox.critical(self, "Save Error", f"Could not save prompts: {e}")
@@ -464,6 +475,7 @@ class PromptManager(QWidget):
             self.prompts = {}
             self.next_id = 0
             self.categories = []
+            self.global_tags = set() # Initialize global_tags if file doesn't exist
             return
         try:
             with open(self.data_file, 'r', encoding='utf-8') as f:
@@ -490,17 +502,20 @@ class PromptManager(QWidget):
                 self.prompts = loaded_prompts
                 self.categories = loaded_data.get('categories', [])
                 self.categories.sort()
+                self.global_tags = set(loaded_data.get('global_tags', [])) # Load global_tags
 
         except (IOError, json.JSONDecodeError) as e:
             QMessageBox.critical(self, "Load Error", f"Could not load prompts from {self.data_file}: {e}")
             self.prompts = {}
             self.next_id = 0
             self.categories = []
+            self.global_tags = set() # Reset global_tags on error
         except Exception as e:
             QMessageBox.critical(self, "Unknown Error", f"An unexpected error occurred while loading: {e}")
             self.prompts = {}
             self.next_id = 0
             self.categories = []
+            self.global_tags = set() # Reset global_tags on error
 
     def show_context_menu(self, position):
         menu = QMenu()
@@ -611,20 +626,18 @@ class PromptManager(QWidget):
             print("Category management cancelled.")
 
     def manageTags(self):
-        all_current_tags = set()
-        for prompt_info in self.prompts.values():
-            all_current_tags.update(prompt_info['data'].get('tags', []))
-
-        dialog = TagDialog(self, tags=list(all_current_tags))
+        # Pass the current global_tags to the dialog
+        dialog = TagDialog(self, tags=list(self.global_tags))
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            renamed_tags, removed_tags = dialog.getChanges()
+            renamed_tags, removed_tags, added_tags = dialog.getChanges()
 
-            if not renamed_tags and not removed_tags:
+            if not renamed_tags and not removed_tags and not added_tags:
                 print("No tag changes to apply.")
                 return
 
             prompts_updated = False
+            # Apply renames and removals to existing prompts
             for prompt_id, prompt_info in self.prompts.items():
                 current_prompt_tags = set(prompt_info['data'].get('tags', []))
                 new_prompt_tags = set()
@@ -648,7 +661,21 @@ class PromptManager(QWidget):
                     print(f"Tags updated for Prompt ID {prompt_id}: {sorted_new_tags}")
                     prompts_updated = True
 
-            if prompts_updated:
+            # Update global_tags based on changes from the dialog
+            for old_name, new_name in renamed_tags.items():
+                if old_name in self.global_tags:
+                    self.global_tags.remove(old_name)
+                self.global_tags.add(new_name)
+
+            for tag in removed_tags:
+                if tag in self.global_tags:
+                    self.global_tags.remove(tag)
+
+            for tag in added_tags:
+                self.global_tags.add(tag)
+
+            # Always mark as updated if any changes were made to global_tags or prompts
+            if prompts_updated or renamed_tags or removed_tags or added_tags:
                 print("Updating UI and saving after tag changes...")
                 self.update_tag_list()
                 self.update_prompt_list(filter_category=self.current_filter_category(),
@@ -657,6 +684,6 @@ class PromptManager(QWidget):
                                         filter_favorites=self.is_favorites_filter_active())
                 self.save_prompts()
             else:
-                print("No prompts were affected by tag changes.")
+                print("No changes detected in tags.")
         else:
             print("Tag management cancelled.")
