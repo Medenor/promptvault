@@ -1,0 +1,23 @@
+[
+  {
+    "id": "1",
+    "title": "Generate a simple Python code",
+    "content": "Write a Python script that calculates the sum of two numbers.",
+    "category": "Software Development",
+    "tags": ["Python", "Script", "Calculation"]
+  },
+  {
+    "id": "2",
+    "title": "Content ideas for a blog",
+    "content": "Suggest 5 blog article ideas about artificial intelligence.",
+    "category": "Content Marketing",
+    "tags": ["AI", "Blog", "Ideas"]
+  },
+  {
+    "id": "3",
+    "title": "Write a thank-you email",
+    "content": "Draft a professional thank-you email after a job interview.",
+    "category": "Communication",
+    "tags": ["Email", "Professional", "Interview"]
+  }
+]
