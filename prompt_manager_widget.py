@@ -1,11 +1,12 @@
 import json
 import os
 from collections import defaultdict
+import csv
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLineEdit,
                              QPushButton, QMessageBox, QLabel, QListWidget,
                              QListWidgetItem, QApplication, QAbstractItemView,
                              QToolTip, QDialog, QCheckBox, QSizePolicy,
-                             QSpacerItem, QFrame, QMenu)
+                             QSpacerItem, QFrame, QMenu, QFileDialog)
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QAction
 from PyQt6.QtCore import Qt, QSize
 
@@ -120,6 +121,7 @@ class PromptManager(QWidget):
         self.deleteButton.setToolTip("Delete selected prompt(s)")
         self.deleteButton.clicked.connect(self.deleteSelectedPrompts)
         button_layout.addWidget(self.deleteButton)
+
 
         right_layout.addLayout(button_layout)
 
@@ -523,11 +525,13 @@ class PromptManager(QWidget):
         edit_action = menu.addAction("Edit")
         delete_action = menu.addAction("Delete")
         copy_prompt_action = menu.addAction("Copy Prompt")
+        export_action = menu.addAction("Export")
         toggle_favorite_action = menu.addAction("Add to Favorites" if not self.is_selected_prompt_favorite() else "Remove from Favorites")
 
         edit_action.triggered.connect(self.editPrompt)
         delete_action.triggered.connect(self.deleteSelectedPrompts)
         copy_prompt_action.triggered.connect(self.copy_selected_prompt_text)
+        export_action.triggered.connect(self.export_selected_prompts)
         toggle_favorite_action.triggered.connect(self.toggle_selected_prompt_favorite)
 
         selected_items = self.promptList.selectedItems()
@@ -535,6 +539,7 @@ class PromptManager(QWidget):
 
         edit_action.setEnabled(num_selected == 1)
         copy_prompt_action.setEnabled(num_selected == 1)
+        export_action.setEnabled(num_selected > 0)
         toggle_favorite_action.setEnabled(num_selected >= 1)
         delete_action.setEnabled(num_selected >= 1)
 
@@ -589,6 +594,228 @@ class PromptManager(QWidget):
         else:
             print("No favorite status change necessary.")
 
+    def export_selected_prompts(self):
+        selected_ids = self.get_selected_prompt_ids()
+        if not selected_ids:
+            QMessageBox.warning(self, "No Selection", "Please select at least one prompt to export.")
+            return
+
+        file_name, _ = QFileDialog.getSaveFileName(self, "Export Selected Prompts", "",
+                                                  "CSV Files (*.csv);;Markdown Files (*.md);;All Files (*)")
+        if file_name:
+            try:
+                if file_name.lower().endswith('.csv'):
+                    self._export_to_csv(file_name, selected_ids)
+                elif file_name.lower().endswith('.md'):
+                    self._export_to_markdown(file_name, selected_ids)
+                else:
+                    QMessageBox.warning(self, "Export Error", "Unsupported file format. Please use .csv or .md")
+                    return
+                QMessageBox.information(self, "Export Successful", f"Selected prompts exported to {file_name}")
+            except Exception as e:
+                QMessageBox.critical(self, "Export Error", f"Failed to export selected prompts: {e}")
+
+    def export_prompts(self):
+        file_name, _ = QFileDialog.getSaveFileName(self, "Export Prompts", "",
+                                                  "CSV Files (*.csv);;Markdown Files (*.md);;All Files (*)")
+        if file_name:
+            try:
+                if file_name.lower().endswith('.csv'):
+                    self._export_to_csv(file_name)
+                elif file_name.lower().endswith('.md'):
+                    self._export_to_markdown(file_name)
+                else:
+                    QMessageBox.warning(self, "Export Error", "Unsupported file format. Please use .csv or .md")
+                    return
+                QMessageBox.information(self, "Export Successful", f"Prompts exported to {file_name}")
+            except Exception as e:
+                QMessageBox.critical(self, "Export Error", f"Failed to export prompts: {e}")
+
+    def _export_to_csv(self, file_path, prompt_ids=None):
+        with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+            fieldnames = ['title', 'prompt', 'note', 'category', 'tags', 'favorite']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            
+            prompts_to_export = self.prompts.items()
+            if prompt_ids is not None:
+                prompts_to_export = [(pid, self.prompts[pid]) for pid in prompt_ids if pid in self.prompts]
+
+            for prompt_id, prompt_info in prompts_to_export:
+                data = prompt_info['data']
+                row = {
+                    'title': data.get('title', ''),
+                    'prompt': data.get('prompt', ''),
+                    'note': data.get('note', ''),
+                    'category': data.get('category', 'No category'),
+                    'tags': ', '.join(data.get('tags', [])),
+                    'favorite': 'Yes' if data.get('favorite', False) else 'No'
+                }
+                writer.writerow(row)
+
+    def _export_to_markdown(self, file_path, prompt_ids=None):
+        with open(file_path, 'w', encoding='utf-8') as mdfile:
+            prompts_to_export = self.prompts.items()
+            if prompt_ids is not None:
+                prompts_to_export = [(pid, self.prompts[pid]) for pid in prompt_ids if pid in self.prompts]
+
+            for prompt_id, prompt_info in prompts_to_export:
+                data = prompt_info['data']
+                mdfile.write(f"# {data.get('title', 'Untitled')}\n\n")
+                mdfile.write(f"**Category:** {data.get('category', 'No category')}\n")
+                mdfile.write(f"**Tags:** {', '.join(data.get('tags', []))}\n")
+                mdfile.write(f"**Favorite:** {'Yes' if data.get('favorite', False) else 'No'}\n\n")
+                mdfile.write("## Prompt\n")
+                mdfile.write(f"{data.get('prompt', '')}\n\n")
+                if data.get('note'):
+                    mdfile.write("## Note\n")
+                    mdfile.write(f"{data.get('note', '')}\n\n")
+                mdfile.write("---\n\n") # Separator
+
+    def import_prompts(self):
+        file_name, _ = QFileDialog.getOpenFileName(self, "Import Prompts", "",
+                                                  "CSV Files (*.csv);;Markdown Files (*.md);;All Files (*)")
+        if file_name:
+            try:
+                imported_prompts = []
+                if file_name.lower().endswith('.csv'):
+                    imported_prompts = self._import_from_csv(file_name)
+                elif file_name.lower().endswith('.md'):
+                    imported_prompts = self._import_from_markdown(file_name)
+                else:
+                    QMessageBox.warning(self, "Import Error", "Unsupported file format. Please use .csv or .md")
+                    return
+
+                if not imported_prompts:
+                    QMessageBox.information(self, "Import Complete", "No prompts found in the selected file.")
+                    return
+
+                imported_count = 0
+                for prompt_data in imported_prompts:
+                    if self._handle_imported_prompt(prompt_data):
+                        imported_count += 1
+
+                self.update_category_list()
+                self.update_tag_list()
+                self.update_prompt_list(filter_category=self.current_filter_category(),
+                                        filter_tag=self.current_filter_tag(),
+                                        search_term=self.searchBar.text(),
+                                        filter_favorites=self.is_favorites_filter_active())
+                self.save_prompts()
+                QMessageBox.information(self, "Import Successful", f"Successfully imported {imported_count} prompt(s).")
+
+            except Exception as e:
+                QMessageBox.critical(self, "Import Error", f"Failed to import prompts: {e}")
+
+    def _import_from_csv(self, file_path):
+        prompts = []
+        with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                # Convert 'Yes'/'No' to boolean for 'favorite'
+                row['favorite'] = row.get('favorite', 'No').lower() == 'yes'
+                # Convert tags string to list
+                if 'tags' in row and row['tags']:
+                    row['tags'] = [tag.strip() for tag in row['tags'].split(',')]
+                else:
+                    row['tags'] = []
+                prompts.append(row)
+        return prompts
+
+    def _import_from_markdown(self, file_path):
+        prompts = []
+        current_prompt = {}
+        current_section = None
+        with open(file_path, 'r', encoding='utf-8') as mdfile:
+            content = mdfile.read()
+            # Split by '---' separator, then process each block
+            blocks = content.split('---')
+            for block in blocks:
+                if not block.strip():
+                    continue
+
+                lines = block.strip().split('\n')
+                current_prompt = {'title': '', 'prompt': '', 'note': '', 'category': 'No category', 'tags': [], 'favorite': False}
+                current_section = None
+                
+                for line in lines:
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    if line.startswith('# '): # Title
+                        current_prompt['title'] = line[2:].strip()
+                        current_section = 'title'
+                    elif line.startswith('## Prompt'):
+                        current_section = 'prompt'
+                    elif line.startswith('## Note'):
+                        current_section = 'note'
+                    elif line.startswith('**Category:**'):
+                        current_prompt['category'] = line.replace('**Category:**', '').strip()
+                    elif line.startswith('**Tags:**'):
+                        tags_str = line.replace('**Tags:**', '').strip()
+                        current_prompt['tags'] = [tag.strip() for tag in tags_str.split(',') if tag.strip()]
+                    elif line.startswith('**Favorite:**'):
+                        current_prompt['favorite'] = line.replace('**Favorite:**', '').strip().lower() == 'yes'
+                    elif current_section == 'prompt':
+                        current_prompt['prompt'] += line + '\n'
+                    elif current_section == 'note':
+                        current_prompt['note'] += line + '\n'
+                
+                # Clean up trailing newlines
+                current_prompt['prompt'] = current_prompt['prompt'].strip()
+                current_prompt['note'] = current_prompt['note'].strip()
+
+                if current_prompt.get('title') or current_prompt.get('prompt'): # Only add if it has some content
+                    prompts.append(current_prompt)
+        return prompts
+
+    def _handle_imported_prompt(self, imported_data):
+        # Check for existing prompt with the same title
+        existing_prompt_id = None
+        for pid, p_info in self.prompts.items():
+            if p_info['data'].get('title') == imported_data.get('title'):
+                existing_prompt_id = pid
+                break
+
+        if existing_prompt_id is not None:
+            # Duplicate found, ask user for action
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("Duplicate Prompt Detected")
+            msg_box.setText(f"A prompt with the title '{imported_data.get('title', 'Untitled')}' already exists.")
+            msg_box.setInformativeText("What would you like to do?")
+            
+            skip_button = msg_box.addButton("Skip", QMessageBox.ButtonRole.RejectRole)
+            overwrite_button = msg_box.addButton("Overwrite", QMessageBox.ButtonRole.AcceptRole)
+            keep_both_button = msg_box.addButton("Keep Both", QMessageBox.ButtonRole.ActionRole)
+            
+            msg_box.setDefaultButton(skip_button)
+            
+            msg_box.exec()
+
+            if msg_box.clickedButton() == overwrite_button:
+                # Overwrite existing prompt
+                self.prompts[existing_prompt_id]['data'] = imported_data
+                self.prompts[existing_prompt_id]['history'].append(imported_data) # Add to history
+                print(f"Prompt '{imported_data.get('title')}' overwritten.")
+                return True
+            elif msg_box.clickedButton() == keep_both_button:
+                # Add as a new prompt
+                prompt_id = self.next_id
+                self.next_id += 1
+                self.prompts[prompt_id] = {'data': imported_data, 'history': [imported_data]}
+                print(f"Prompt '{imported_data.get('title')}' imported as new.")
+                return True
+            else: # Skip
+                print(f"Prompt '{imported_data.get('title')}' skipped.")
+                return False
+        else:
+            # No duplicate, add as a new prompt
+            prompt_id = self.next_id
+            self.next_id += 1
+            self.prompts[prompt_id] = {'data': imported_data, 'history': [imported_data]}
+            print(f"Prompt '{imported_data.get('title')}' imported.")
+            return True
 
     def manageCategories(self):
         dialog = CategoryDialog(self, self.categories)
