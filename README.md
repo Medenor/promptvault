@@ -8,6 +8,7 @@ PromptVault is a prompt management application designed to help users easily org
 *   **Prompt Management**: Create, edit, and delete prompts with titles, content, categories, and tags.
 *   **Categorization**: Organize your prompts by customizable categories for better structuring.
 *   **Tagging**: Add tags to your prompts for quick search and filtering.
+*   **Import/Export Prompts**: Easily import and export your prompts in `.csv` or `.md` formats. You can export your entire collection from the `File` menu or export specific prompts by right-clicking on them.
 *   **Search and Filtering**: Quickly find the prompts you need with advanced search and filtering features.
 *   **Versioning**: Track prompt history to maintain a complete record of changes, and easily roll back to previous versions if needed.
 *   **Intuitive User Interface**: A simple and easy-to-use graphical interface for a pleasant user experience.
