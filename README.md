@@ -1,6 +1,6 @@
 <h1 align="center">
   <a href="https://codeberg.org/medenor/promptvault">
-    <img src="docs/images/promptvault_logo.svg" alt="Logo" width="100" height="100">
+    <img src="docs/images/promptvault_logo.svg" alt="Logo" width="250" height="250">
   </a>
 </h1>
 
@@ -21,11 +21,9 @@
 <br />
 
 [![Project license](https://img.shields.io/github/license/medenor/promptvault.svg?style=flat-square)](LICENSE)
-
 [![Pull Requests welcome](https://img.shields.io/badge/PRs-welcome-ff69b4.svg?style=flat-square)](https://codeberg.org/medenor/promptvault/issues)
 [![Vibe-coded with love by Medenor](https://img.shields.io/badge/%3C%2F%3E%20with%20%E2%99%A5%20by-Medenor-ff1414.svg?style=flat-square)](https://codeberg.org/medenor)
-
-[![Switched to Codeberg](https://img.shields.io/badge/Switched_to-Codeberg-blue?style=for-the-badge&logo=codeberg&logoColor=white)](https://codeberg.org/medenor/promptvault/)
+[![Switched to Codeberg](https://img.shields.io/badge/Switched_to-Codeberg-blue?style=flat-square&logo=codeberg&logoColor=white)](https://codeberg.org/medenor/promptvault/)
 
 </div>
 
