@@ -10,11 +10,11 @@
   <a href="#about"><strong>Explore the screenshots »</strong></a>
   <br />
   <br />
-  <a href="https://codeberg.org/medenor/promptvault/issues">Report a Bug</a>
+  <a href="https://codeberg.org/medenor/promptvault/issues/new?assignees=&labels=bug&template=01_BUG_REPORT.md&title=bug%3A+">Report a Bug</a>
   ·
-  <a href="https://codeberg.org/medenor/promptvault/issues">Request a Feature</a>
-  ·
-  <a href="https://codeberg.org/medenor/promptvault/issues">Ask a Question</a>
+  <a href="https://codeberg.org/medenor/promptvault/issues/new?assignees=&labels=enhancement&template=02_FEATURE_REQUEST.md&title=feat%3A+">Request a Feature</a>
+  .
+  <a href="https://codeberg.org/medenor/promptvault/issues/new?assignees=&labels=question&template=04_SUPPORT_QUESTION.md&title=support%3A+">Ask a Question</a>
 </div>
 
 <div align="center">
@@ -119,7 +119,7 @@ Reach out to the maintainer at one of the following places:
 If you want to say **thank you** or/and support active development of PromptVault:
 
 - Add a [Star](https://codeberg.org/medenor/promptvault) to the project.
-- Write interesting articles about the project on your personal blog.
+- Write interesting articles about the project on [Dev.to](https://dev.to/), [Medium](https://medium.com/) or your personal blog.
 
 Together, we can make PromptVault **better**!
 
