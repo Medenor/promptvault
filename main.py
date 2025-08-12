@@ -57,8 +57,25 @@ if __name__ == '__main__':
     dark_theme_action = QAction('Dark Theme', main_window)
     dark_theme_action.triggered.connect(theme_manager.set_dark_theme)
     view_menu.addAction(dark_theme_action)
+
+    # Add separator
+    view_menu.addSeparator()
+
+    # Create Toggle Fullscreen action
+    fullscreen_action = QAction('Toggle Fullscreen', main_window)
+    fullscreen_action.setCheckable(True)
+    fullscreen_action.triggered.connect(lambda: toggle_fullscreen(main_window, fullscreen_action))
+    view_menu.addAction(fullscreen_action)
     
     # Show the main window
     main_window.show()
     
     sys.exit(app.exec())
+
+def toggle_fullscreen(window, action):
+    if window.isFullScreen():
+        window.showNormal()
+        action.setChecked(False)
+    else:
+        window.showFullScreen()
+        action.setChecked(True)
