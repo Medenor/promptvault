@@ -1,3 +1,4 @@
+import difflib
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLineEdit,
                              QPushButton, QMessageBox, QDialogButtonBox, QLabel,
                              QTextEdit, QComboBox, QToolTip, QCheckBox)
@@ -11,6 +12,27 @@ class PromptDialog(QDialog):
         self.history_purged = False
         self.categories = categories if categories else []
         self.initUI(data)
+
+    def _get_diff_html(self, old_text, new_text, label=""):
+        d = difflib.Differ()
+        diff = list(d.compare(old_text.splitlines(keepends=True), new_text.splitlines(keepends=True)))
+
+        html_diff = []
+        if label:
+            html_diff.append(f"<b>{label} Diff:</b><br>")
+        html_diff.append("<pre style='font-family: \"Courier New\", monospace; white-space: pre-wrap;'>")
+        for line in diff:
+            if line.startswith('+'):
+                html_diff.append(f"<span style='color: green;'>{line}</span>")
+            elif line.startswith('-'):
+                html_diff.append(f"<span style='color: red;'>{line}</span>")
+            elif line.startswith('?'):
+                # Ignore diff internal markers
+                continue
+            else:
+                html_diff.append(line)
+        html_diff.append("</pre>")
+        return "".join(html_diff)
 
     def initUI(self, data=None):
         self.setWindowTitle('Add/Edit Prompt')
@@ -83,6 +105,12 @@ class PromptDialog(QDialog):
             self.noteEdit.setPlainText(data.get('note', ''))
         layout.addWidget(self.noteEdit)
 
+        self.diffOutput = QTextEdit()
+        self.diffOutput.setReadOnly(True)
+        self.diffOutput.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        self.diffOutput.setPlaceholderText("Diff will appear here when comparing history versions.")
+        layout.addWidget(self.diffOutput)
+
         buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
@@ -95,13 +123,72 @@ class PromptDialog(QDialog):
         original_history_index = len(self.history_data) - 1 - index
         if 0 <= original_history_index < len(self.history_data):
             version_data = self.history_data[original_history_index]
+            
+            # Update fields with selected history version
             self.titleEdit.setText(version_data.get('title', ''))
             self.favoriteCheckbox.setChecked(version_data.get('favorite', False))
             self.categoryCombo.setCurrentText(version_data.get('category', 'No category'))
             self.tagsEdit.setText(", ".join(version_data.get('tags', [])))
             self.promptEdit.setPlainText(version_data.get('prompt', ''))
             self.noteEdit.setPlainText(version_data.get('note', ''))
+            
             print(f"Displaying history version index {original_history_index}")
+
+            # Generate and display diff
+            if self.current_data:
+                current_title = self.current_data.get('title', '')
+                current_prompt = self.current_data.get('prompt', '')
+                current_note = self.current_data.get('note', '')
+                current_category = self.current_data.get('category', 'No category')
+                current_tags = set(self.current_data.get('tags', []))
+                current_favorite = self.current_data.get('favorite', False)
+
+                history_title = version_data.get('title', '')
+                history_prompt = version_data.get('prompt', '')
+                history_note = version_data.get('note', '')
+                history_category = version_data.get('category', 'No category')
+                history_tags = set(version_data.get('tags', []))
+                history_favorite = version_data.get('favorite', False)
+
+                full_diff_html = []
+
+                if original_history_index == len(self.history_data) - 1: # If it's the current version
+                    self.diffOutput.setHtml("<b>No changes (this is the current version).</b>")
+                    return
+
+                # Text field diffs
+                if current_title != history_title:
+                    full_diff_html.append(self._get_diff_html(history_title, current_title, "Title"))
+                
+                if current_prompt != history_prompt:
+                    full_diff_html.append(self._get_diff_html(history_prompt, current_prompt, "Prompt"))
+                
+                if current_note != history_note:
+                    full_diff_html.append(self._get_diff_html(history_note, current_note, "Note"))
+
+                # Other field diffs
+                if current_category != history_category:
+                    full_diff_html.append(f"<b>Category Diff:</b> Changed from '{history_category}' to '{current_category}'<br>")
+                
+                if current_tags != history_tags:
+                    removed_tags = history_tags - current_tags
+                    added_tags = current_tags - history_tags
+                    tag_diff_str = "<b>Tags Diff:</b> "
+                    if removed_tags:
+                        tag_diff_str += f"<span style='color: red;'>Removed: {', '.join(sorted(list(removed_tags)))}</span> "
+                    if added_tags:
+                        tag_diff_str += f"<span style='color: green;'>Added: {', '.join(sorted(list(added_tags)))}</span>"
+                    full_diff_html.append(tag_diff_str + "<br>")
+
+                if current_favorite != history_favorite:
+                    full_diff_html.append(f"<b>Favorite Diff:</b> Changed from '{'Yes' if history_favorite else 'No'}' to '{'Yes' if current_favorite else 'No'}'<br>")
+
+                if full_diff_html:
+                    self.diffOutput.setHtml("".join(full_diff_html))
+                else:
+                    self.diffOutput.setHtml("<b>No changes between this version and the current version.</b>")
+            else:
+                self.diffOutput.setHtml("<b>Cannot show diff: Current prompt data is not available.</b>")
 
     def purge_history(self):
         if not self.history_data or len(self.history_data) <= 1:
