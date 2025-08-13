@@ -78,6 +78,7 @@ QComboBox::drop-down {
 
 QComboBox::down-arrow {
     image: url(./images/down_arrow_light.png);
+    max-width: 20px;
 }
 
 QCheckBox {
@@ -123,4 +124,19 @@ QTabBar::tab:selected {
 
 QTabBar::tab:!selected {
     margin-top: 2px; /* make non-selected tabs look smaller */
+}
+
+QPushButton#copyPromptButton {
+    image: url(./images/copy_light.png);
+    padding: 0px; /* Remove padding to make icon fit better */
+    border: none; /* Remove border */
+    background-color: transparent; /* Ensure background is transparent */
+}
+
+QPushButton#copyPromptButton:hover {
+    background-color: rgba(128, 128, 128, 50); /* Keep hover effect */
+}
+
+QPushButton#copyPromptButton:pressed {
+    background-color: rgba(128, 128, 128, 100); /* Keep pressed effect */
 }

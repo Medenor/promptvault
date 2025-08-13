@@ -149,3 +149,4 @@ See [LICENSE](LICENSE) for more information.
 ## Acknowledgements
 
 *   Repository files templates provided by [dec0dOS/amazing-github-template](https://github.com/dec0dOS/amazing-github-template)
+*   Icons by [icons8.com](https://icons8.com)

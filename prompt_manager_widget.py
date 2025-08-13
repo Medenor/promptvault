@@ -203,14 +203,7 @@ class PromptManager(QWidget):
             item_layout.addWidget(title_label, 1)
 
             copy_button = QPushButton()
-            copy_icon = QIcon.fromTheme("edit-copy")
-            if copy_icon.isNull():
-                 copy_button.setText("C")
-            else:
-                 copy_button.setIconSize(QSize(20, 20))
-                 copy_button.setIcon(copy_icon)
-
-
+            copy_button.setObjectName("copyPromptButton") # Add objectName for QSS targeting
             copy_button.setFixedSize(QSize(24, 24))
             copy_button.setToolTip(f"Copy prompt '{title}'")
             copy_button.setStyleSheet("""
