@@ -1,17 +1,38 @@
 import difflib
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLineEdit,
                              QPushButton, QMessageBox, QDialogButtonBox, QLabel,
-                             QTextEdit, QComboBox, QToolTip, QCheckBox)
-from PyQt6.QtCore import Qt
+                             QTextEdit, QComboBox, QToolTip, QCheckBox, QSizePolicy)
+from PyQt6.QtCore import Qt, pyqtSignal # Added pyqtSignal
 
 class PromptDialog(QDialog):
-    def __init__(self, parent=None, data=None, history=None, categories=None):
+    # Define custom signals for panel mode
+    accepted = pyqtSignal()
+    rejected = pyqtSignal()
+
+    def __init__(self, parent=None, data=None, history=None, categories=None, is_panel=False):
         super().__init__(parent)
         self.history_data = history if history else []
         self.current_data = data
         self.history_purged = False
         self.categories = categories if categories else []
+        self.is_panel = is_panel # New flag to indicate panel mode
         self.initUI(data)
+        if self.is_panel:
+            self.setWindowFlags(Qt.WindowType.Widget) # Make it a widget, not a dialog window
+            self.setContentsMargins(0, 0, 0, 0) # Remove margins for panel integration
+            self.layout().setContentsMargins(0, 0, 0, 0) # Remove layout margins
+            self.layout().setSpacing(5) # Adjust spacing for panel
+            self.setWindowTitle("") # No title in panel mode
+            self.setMinimumWidth(300) # Set a minimum width for the panel
+            self.setMaximumWidth(900) # Increased maximum width for the panel
+            self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
+            self.diffOutput.setMinimumHeight(100) # Ensure diff output is visible
+            self.diffOutput.setMaximumHeight(200) # Limit diff output height
+            self.promptEdit.setMinimumHeight(300) # Increased prompt editor height
+            self.noteEdit.setMinimumHeight(50) # Decreased note editor height
+            self.promptEdit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self.noteEdit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+            self.diffOutput.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
 
     def _get_diff_html(self, old_text, new_text, label=""):
         d = difflib.Differ()
@@ -111,10 +132,24 @@ class PromptDialog(QDialog):
         self.diffOutput.setPlaceholderText("Diff will appear here when comparing history versions.")
         layout.addWidget(self.diffOutput)
 
-        buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        buttonBox.accepted.connect(self.accept)
-        buttonBox.rejected.connect(self.reject)
-        layout.addWidget(buttonBox)
+        if self.is_panel:
+            # For panel mode, use custom buttons and signals
+            panel_button_layout = QHBoxLayout()
+            self.saveButton = QPushButton("Save")
+            self.cancelButton = QPushButton("Cancel")
+            panel_button_layout.addStretch(1)
+            panel_button_layout.addWidget(self.saveButton)
+            panel_button_layout.addWidget(self.cancelButton)
+            layout.addLayout(panel_button_layout)
+
+            self.saveButton.clicked.connect(self._save_clicked)
+            self.cancelButton.clicked.connect(self._cancel_clicked)
+        else:
+            # For dialog mode, use QDialogButtonBox
+            buttonBox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+            buttonBox.accepted.connect(self.accept)
+            buttonBox.rejected.connect(self.reject)
+            layout.addWidget(buttonBox)
 
     def display_history_version(self, index):
         if not self.history_data or index < 0:
@@ -242,3 +277,22 @@ class PromptDialog(QDialog):
             'prompt': self.promptEdit.toPlainText(),
             'note': self.noteEdit.toPlainText()
         }
+
+    def _save_clicked(self):
+        title = self.titleEdit.text().strip()
+        prompt_text = self.promptEdit.toPlainText().strip()
+
+        if not title:
+            QMessageBox.warning(self, "Missing Required Field", "The 'Prompt Title' field cannot be empty.")
+            self.titleEdit.setFocus()
+            return
+
+        if not prompt_text:
+            QMessageBox.warning(self, "Missing Required Field", "The 'Prompt' field cannot be empty.")
+            self.promptEdit.setFocus()
+            return
+        
+        self.accepted.emit() # Emit custom accepted signal
+
+    def _cancel_clicked(self):
+        self.rejected.emit() # Emit custom rejected signal

@@ -6,15 +6,18 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLineEdit,
                              QPushButton, QMessageBox, QLabel, QListWidget,
                              QListWidgetItem, QApplication, QAbstractItemView,
                              QToolTip, QDialog, QCheckBox, QSizePolicy,
-                             QSpacerItem, QFrame, QMenu, QFileDialog)
+                             QSpacerItem, QFrame, QMenu, QFileDialog, QStackedWidget) # Added QStackedWidget
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor, QAction
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt, QSize, pyqtSignal # Added pyqtSignal
 
 from prompt_dialog import PromptDialog
 from category_dialog import CategoryDialog
 from tag_dialog import TagDialog
 
 class PromptManager(QWidget):
+    # Define a signal to request the main window to show/hide the editor panel
+    showEditorPanel = pyqtSignal(bool)
+
     def __init__(self):
         super().__init__()
 
@@ -26,10 +29,21 @@ class PromptManager(QWidget):
         self.categories = []
         self.global_tags = set() # New attribute for globally managed tags
         self.load_prompts()
+        
+        self.editor_dock = None
+        self.editor_content_widget = None
+        self.current_editor_instance = None # To keep track of the active PromptDialog instance
+
         self.initUI()
         self.update_category_list()
         self.update_tag_list()
         self.update_prompt_list()
+
+    def set_editor_panel(self, dock_widget, content_widget):
+        self.editor_dock = dock_widget
+        self.editor_content_widget = content_widget
+        # Connect the dock's visibilityChanged signal to our own signal
+        self.editor_dock.visibilityChanged.connect(self.showEditorPanel)
 
 
     def initUI(self):
@@ -81,7 +95,7 @@ class PromptManager(QWidget):
 
         left_layout.addSpacerItem(QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding))
 
-        main_layout.addLayout(left_layout, 1)
+        main_layout.addLayout(left_layout, 1) # Decrease left column stretch (using integer ratio)
 
         right_layout = QVBoxLayout()
 
@@ -125,7 +139,20 @@ class PromptManager(QWidget):
 
         right_layout.addLayout(button_layout)
 
-        main_layout.addLayout(right_layout, 3)
+        main_layout.addLayout(right_layout, 9) # Increase right column stretch (using integer ratio)
+
+    def clear_editor_panel(self):
+        if self.editor_content_widget:
+            # Remove all widgets from the layout
+            while self.editor_content_widget.layout().count():
+                child = self.editor_content_widget.layout().takeAt(0)
+                if child.widget():
+                    child.widget().deleteLater()
+            self.current_editor_instance = None # Clear reference to old editor
+
+    def show_editor_panel(self, show=True):
+        if self.editor_dock:
+            self.editor_dock.setVisible(show)
 
     def update_category_list(self):
         self.categoryList.clear()
@@ -316,23 +343,21 @@ class PromptManager(QWidget):
 
         initial_data = {'category': default_category, 'favorite': False}
 
-        dialog = PromptDialog(self, data=initial_data, categories=self.categories)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            data = dialog.getPromptData()
-            if not data['title']:
-                QMessageBox.warning(self, "Missing Title", "Prompt title cannot be empty.")
-                return
+        self.clear_editor_panel() # Clear any previous content
 
-            prompt_id = self.next_id
-            self.next_id += 1
-            self.prompts[prompt_id] = {'data': data, 'history': [data]}
-            self.update_category_list()
-            self.update_tag_list()
-            self.update_prompt_list(filter_category=self.current_filter_category(),
-                                    filter_tag=self.current_filter_tag(),
-                                    search_term=self.searchBar.text(),
-                                    filter_favorites=self.is_favorites_filter_active())
-            self.save_prompts()
+        # Create a new PromptDialog instance, but don't show it as a dialog
+        self.current_editor_instance = PromptDialog(self, data=initial_data, categories=self.categories, is_panel=True)
+        
+        # Add the dialog's layout to the dock's content widget
+        self.editor_content_widget.layout().addWidget(self.current_editor_instance)
+        
+        # Connect signals for saving and canceling
+        self.current_editor_instance.accepted.connect(self._save_prompt_from_panel)
+        self.current_editor_instance.rejected.connect(self._cancel_prompt_edit_from_panel)
+
+        self.show_editor_panel(True) # Show the dock widget
+        self.editor_dock.setWindowTitle("Add New Prompt")
+        print("Opened Add Prompt panel.")
 
     def editPrompt(self):
         prompt_id = self.get_selected_prompt_id()
@@ -355,45 +380,22 @@ class PromptManager(QWidget):
         current_data = self.prompts[prompt_id]['data']
         history = self.prompts[prompt_id]['history']
 
-        dialog = PromptDialog(self, current_data, history=history, categories=self.categories)
+        self.clear_editor_panel() # Clear any previous content
 
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            new_data = dialog.getPromptData()
-            if not new_data['title']:
-                QMessageBox.warning(self, "Missing Title", "Prompt title cannot be empty.")
-                return
+        # Create a new PromptDialog instance, but don't show it as a dialog
+        self.current_editor_instance = PromptDialog(self, current_data, history=history, categories=self.categories, is_panel=True)
+        self.current_editor_instance.setProperty("editing_prompt_id", prompt_id) # Store the ID being edited
+        
+        # Add the dialog's layout to the dock's content widget
+        self.editor_content_widget.layout().addWidget(self.current_editor_instance)
+        
+        # Connect signals for saving and canceling
+        self.current_editor_instance.accepted.connect(self._save_prompt_from_panel)
+        self.current_editor_instance.rejected.connect(self._cancel_prompt_edit_from_panel)
 
-            history_changed = False
-            data_changed = new_data != current_data
-
-            if dialog.history_purged:
-                self.prompts[prompt_id]['history'] = [new_data]
-                self.prompts[prompt_id]['data'] = new_data
-                history_changed = True
-                data_changed = True
-                print(f"History purged and updated for ID {prompt_id}")
-
-            elif data_changed:
-                self.prompts[prompt_id]['data'] = new_data
-                if not self.prompts[prompt_id]['history'] or new_data != self.prompts[prompt_id]['history'][-1]:
-                     self.prompts[prompt_id]['history'].append(new_data)
-                     history_changed = True
-                     print(f"New version added to history for ID {prompt_id}")
-                else:
-                     print(f"Data identical to last history version for ID {prompt_id}, history not modified.")
-            else:
-                print(f"No changes detected for ID {prompt_id}, history not modified.")
-
-            if data_changed:
-                self.update_category_list()
-                self.update_tag_list()
-                self.update_prompt_list(filter_category=self.current_filter_category(),
-                                        filter_tag=self.current_filter_tag(),
-                                        search_term=self.searchBar.text(),
-                                        filter_favorites=self.is_favorites_filter_active())
-                self.save_prompts()
-            else:
-                print("No save necessary.")
+        self.show_editor_panel(True) # Show the dock widget
+        self.editor_dock.setWindowTitle(f"Edit Prompt: {current_data.get('title', 'Untitled')}")
+        print(f"Opened Edit Prompt panel for ID {prompt_id}.")
 
     def deleteSelectedPrompts(self):
         selected_ids = self.get_selected_prompt_ids()
@@ -907,3 +909,60 @@ class PromptManager(QWidget):
                 print("No changes detected in tags.")
         else:
             print("Tag management cancelled.")
+
+    def _save_prompt_from_panel(self):
+        if not self.current_editor_instance:
+            print("No active editor instance to save from.")
+            return
+
+        data = self.current_editor_instance.getPromptData()
+        if not data['title']:
+            QMessageBox.warning(self, "Missing Title", "Prompt title cannot be empty.")
+            return
+
+        prompt_id = self.current_editor_instance.property("editing_prompt_id")
+
+        if prompt_id is None: # This is an add operation
+            prompt_id = self.next_id
+            self.next_id += 1
+            self.prompts[prompt_id] = {'data': data, 'history': [data]}
+            print(f"New prompt ID {prompt_id} added from panel.")
+        else: # This is an edit operation
+            if prompt_id not in self.prompts:
+                QMessageBox.critical(self, "Error", f"Could not find prompt with ID {prompt_id} to save.")
+                return
+
+            current_data = self.prompts[prompt_id]['data']
+            history = self.prompts[prompt_id]['history']
+            
+            data_changed = data != current_data
+
+            if self.current_editor_instance.history_purged:
+                self.prompts[prompt_id]['history'] = [data]
+                self.prompts[prompt_id]['data'] = data
+                print(f"History purged and updated for ID {prompt_id} from panel.")
+            elif data_changed:
+                self.prompts[prompt_id]['data'] = data
+                if not self.prompts[prompt_id]['history'] or data != self.prompts[prompt_id]['history'][-1]:
+                    self.prompts[prompt_id]['history'].append(data)
+                    print(f"New version added to history for ID {prompt_id} from panel.")
+                else:
+                    print(f"Data identical to last history version for ID {prompt_id}, history not modified from panel.")
+            else:
+                print(f"No changes detected for ID {prompt_id}, history not modified from panel.")
+
+        self.update_category_list()
+        self.update_tag_list()
+        self.update_prompt_list(filter_category=self.current_filter_category(),
+                                filter_tag=self.current_filter_tag(),
+                                search_term=self.searchBar.text(),
+                                filter_favorites=self.is_favorites_filter_active())
+        self.save_prompts()
+        self.clear_editor_panel()
+        self.show_editor_panel(False) # Hide the panel after saving
+        print("Prompt saved and panel closed.")
+
+    def _cancel_prompt_edit_from_panel(self):
+        self.clear_editor_panel()
+        self.show_editor_panel(False) # Hide the panel
+        print("Prompt edit/add cancelled and panel closed.")
