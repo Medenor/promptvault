@@ -230,7 +230,7 @@ class PromptDialog(QDialog):
             QMessageBox.information(self, "No History", "There is no history to purge.")
             return
 
-        message = "Are you sure you want to delete all history for this prompt?\n\nOnly the version displayed as '(Current)' will be kept after clicking OK."
+        message = "Are you sure you want to delete all history for this prompt?\n\nOnly the version displayed as '(Current)' will be kept after clicking Save."
         msgBox = QMessageBox(self)
         msgBox.setWindowTitle("History Purge Confirmation")
         msgBox.setText(message)
@@ -245,9 +245,9 @@ class PromptDialog(QDialog):
             self.history_purged = True
             self.purgeHistoryButton.setEnabled(False)
             self.historyCombo.setEnabled(False)
-            self.purgeHistoryButton.setText("Purged (on OK)")
+            self.purgeHistoryButton.setText("Purged (on Save)")
             QToolTip.showText(self.purgeHistoryButton.mapToGlobal(self.purgeHistoryButton.rect().bottomLeft()),
-                              "History will be purged when you click OK.", msecShowTime=3000)
+                              "History will be purged when you click on Save.", msecShowTime=3000)
             print("Marked for purge.")
 
     def accept(self):

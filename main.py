@@ -74,7 +74,7 @@ class MainWindow(QMainWindow):
         self.right_dock = QDockWidget("Prompt Editor", self)
         self.right_dock.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea)
         self.right_dock.setFeatures(QDockWidget.DockWidgetFeature.DockWidgetMovable | QDockWidget.DockWidgetFeature.DockWidgetClosable)
-        self.right_dock.setVisible(False) # Initially hidden
+        self.right_dock.setVisible(True) # Set to visible by default
         self.right_dock.setMinimumWidth(800) # Double the minimum width for the dock widget
 
         # Create a placeholder widget for the dock content
@@ -90,7 +90,7 @@ class MainWindow(QMainWindow):
         # Create the menu bar
         menubar = self.menuBar()
         
-        # Create PromptVault menu
+        # Create PromptVault menu (first position)
         promptvault_menu = menubar.addMenu('PromptVault')
 
         # About PromptVault action
